@@ -1,3 +1,4 @@
+#include <openssl/ripemd.h>
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
 #include <janet.h>
@@ -48,11 +49,30 @@ JANET_FN(cfun_hmac_sha512,
     return janet_wrap_string(md);
 }
 
+JANET_FN(cfun_ripemd160,
+         "(openssl/ripemd160 message)",
+         "Calculate ripemd160 of the given message.") {
+    janet_fixarity(argc, 1);
+    const uint8_t* message = janet_getstring(argv, 0);
+
+    RIPEMD160_CTX ctx;
+    RIPEMD160_Init(&ctx);
+    RIPEMD160_Update(&ctx, message, janet_string_length(message));
+
+    size_t outputlen = RIPEMD160_DIGEST_LENGTH;
+    uint8_t* hashcode = janet_string_begin(outputlen);
+    RIPEMD160_Final(hashcode, &ctx);
+
+    janet_string_end(hashcode);
+    return janet_wrap_string(hashcode);
+}
+
 JANET_MODULE_ENTRY(JanetTable *env) {
     JanetRegExt cfuns[] = {
         JANET_REG("sha512", cfun_sha512),
         JANET_REG("sha256", cfun_sha256),
         JANET_REG("hmac-sha512", cfun_hmac_sha512),
+        JANET_REG("ripemd160", cfun_ripemd160),
         JANET_REG_END
     };
     janet_cfuns_ext(env, "openssl", cfuns);
